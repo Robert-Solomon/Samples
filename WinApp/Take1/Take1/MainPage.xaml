@@ -8,11 +8,59 @@
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-	<Grid>
-		<Button Content="Create Exercise" HorizontalAlignment="Left" Margin="90,76,0,0" VerticalAlignment="Top" Click="Button_Click" Background="#33FFFF00"/>
-		<Button Content="Display Exercise List&#xD;&#xA;" HorizontalAlignment="Left" Margin="246,76,0,0" VerticalAlignment="Top" Height="32" Background="#33FFFF00"/>
-		<Button Content="Create Workout" HorizontalAlignment="Left" Margin="428,76,0,0" VerticalAlignment="Top" Click="Button_Click_1" Background="#33FFFF00"/>
-		<Button Content="Save Changes" HorizontalAlignment="Left" Margin="1142,40,0,0" VerticalAlignment="Top" Width="123" Background="#3300FF00"/>
-		<Button Content="Discard Changes" HorizontalAlignment="Left" Margin="1142,90,0,0" VerticalAlignment="Top" Background="#33FF0000"/>
-	</Grid>
+	<SplitView IsPaneOpen="True" OpenPaneLength="225" CompactPaneLength="48" DisplayMode="Inline">
+		<SplitView.Pane>
+			<Grid>
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="Auto"/>
+				</Grid.ColumnDefinitions>
+				<Grid.RowDefinitions>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+					<RowDefinition Height="Auto"/>
+				</Grid.RowDefinitions>
+				<TextBlock Text="ACTION" Margin="62,12,0,0" Style="{StaticResource BaseTextBlockStyle}"/>
+				<StackPanel Grid.Row="1" Orientation="Horizontal" Background="#33FFFF00">
+					<SymbolIcon Symbol="Add" Margin="12,0,12,0"/>
+					<Button x:Name="CreateExercise" Content="Create Exercise" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_2"/>
+				</StackPanel>
+				<StackPanel Grid.Row="2" Orientation="Horizontal" Background="#33FFFF00">
+					<SymbolIcon Symbol="AllApps" Margin="12,0,12,0"/>
+					<Button Content="Display Exercise List" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_3"/>
+				</StackPanel>
+				<StackPanel Grid.Row="3" Orientation="Horizontal" Background="#33FFFF00">
+					<SymbolIcon Symbol="OpenWith" Margin="12,0,12,0"/>
+					<Button Content="Create Workout" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_4"/>
+				</StackPanel>
+				<TextBlock Text="" Grid.Row="6" Margin="0,40,0,0"/>
+				<StackPanel Grid.Row="7" Orientation="Horizontal" Background="#3300FF00">
+					<SymbolIcon Symbol="Save" Margin="12,0,12,0"/>
+					<Button Content="Save Changes" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_5"/>
+				</StackPanel>
+				<StackPanel Grid.Row="8" Orientation="Horizontal" Background="#33FF0000">
+					<SymbolIcon Symbol="Clear" Margin="12,0,12,0"/>
+					<Button Content="Discard Changes" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_6"/>
+				</StackPanel>
+				<StackPanel Grid.Row="9" Orientation="Horizontal" Background="#33454545">
+					<SymbolIcon Symbol="Setting" Margin="12,0,12,0"/>
+					<Button Content="Settings" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_7"/>
+				</StackPanel>
+			</Grid>
+		</SplitView.Pane>
+		<Grid>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto"/>
+				<RowDefinition Height="*"/>
+			</Grid.RowDefinitions>
+			<TextBlock Text="SPLITVIEW CONTENT" Margin="12,12,0,0" Style="{StaticResource BaseTextBlockStyle}"/>
+			<TextBlock x:Name="content" Grid.Row="1" Margin="12,12,0,0" Style="{StaticResource BodyTextBlockStyle}" />
+		</Grid>
+	</SplitView>
 </Page>
