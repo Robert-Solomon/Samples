@@ -8,59 +8,117 @@
     mc:Ignorable="d"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-	<SplitView IsPaneOpen="True" OpenPaneLength="225" CompactPaneLength="48" DisplayMode="Inline">
-		<SplitView.Pane>
-			<Grid>
-				<Grid.ColumnDefinitions>
-					<ColumnDefinition Width="Auto"/>
-				</Grid.ColumnDefinitions>
-				<Grid.RowDefinitions>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-					<RowDefinition Height="Auto"/>
-				</Grid.RowDefinitions>
-				<TextBlock Text="ACTION" Margin="62,12,0,0" Style="{StaticResource BaseTextBlockStyle}"/>
-				<StackPanel Grid.Row="1" Orientation="Horizontal" Background="#33FFFF00">
-					<SymbolIcon Symbol="Add" Margin="12,0,12,0"/>
-					<Button x:Name="CreateExercise" Content="Create Exercise" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_CreateExercise_Click"/>
-				</StackPanel>
-				<StackPanel Grid.Row="2" Orientation="Horizontal" Background="#33FFFF00">
-					<SymbolIcon Symbol="AllApps" Margin="12,0,12,0"/>
-					<Button x:Name="DisplayExerciseList" Content="Display Exercise List" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_DisplayExerciseList_Click"/>
-				</StackPanel>
-				<StackPanel Grid.Row="3" Orientation="Horizontal" Background="#33FFFF00">
-					<SymbolIcon Symbol="OpenWith" Margin="12,0,12,0"/>
-					<Button x:Name="CreateWorkout" Content="Create Workout" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_CreateWorkout_Click"/>
-				</StackPanel>
-				<TextBlock Text="" Grid.Row="6" Margin="0,40,0,0"/>
-				<StackPanel Grid.Row="7" Orientation="Horizontal" Background="#3300FF00">
-					<SymbolIcon Symbol="Save" Margin="12,0,12,0"/>
-					<Button x:Name="SaveChanges" Content="Save Changes" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_SaveChanges_Click"/>
-				</StackPanel>
-				<StackPanel Grid.Row="8" Orientation="Horizontal" Background="#33FF0000">
-					<SymbolIcon Symbol="Clear" Margin="12,0,12,0"/>
-					<Button x:Name="DiscardChanges" Content="Discard Changes" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_DiscardChanges_Click"/>
-				</StackPanel>
-				<StackPanel Grid.Row="9" Orientation="Horizontal" Background="#33454545">
-					<SymbolIcon Symbol="Setting" Margin="12,0,12,0"/>
-					<Button x:Name="Settings" Content="Settings" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Settings_Click"/>
-				</StackPanel>
-			</Grid>
-		</SplitView.Pane>
-		<Grid>
-			<Grid.RowDefinitions>
-				<RowDefinition Height="Auto"/>
-				<RowDefinition Height="*"/>
-			</Grid.RowDefinitions>
-			<TextBlock Text="SPLITVIEW CONTENT" Margin="12,12,0,0" Style="{StaticResource BaseTextBlockStyle}"/>
-			<TextBlock x:Name="content" Grid.Row="1" Margin="12,12,0,0" Style="{StaticResource BodyTextBlockStyle}" />
-		</Grid>
-	</SplitView>
+    <Grid>
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState x:Name="Narrow">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="0" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="MySplitView.DisplayMode" Value="Overlay" />
+                        <Setter Target="MySplitView.IsPaneOpen" Value="False" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Compact">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="720" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="MySplitView.DisplayMode" Value="CompactOverlay" />
+                        <Setter Target="MySplitView.IsPaneOpen" Value="False" />
+                    </VisualState.Setters>
+                </VisualState>
+                <VisualState x:Name="Wide">
+                    <VisualState.StateTriggers>
+                        <AdaptiveTrigger MinWindowWidth="1024"/>
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="MySplitView.DisplayMode" Value="CompactInline" />
+                        <Setter Target="MySplitView.IsPaneOpen" Value="True" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
+        <SplitView x:Name="MySplitView" IsPaneOpen="True" OpenPaneLength="225" CompactPaneLength="48" DisplayMode="Inline">
+            <SplitView.PaneBackground>
+                <SolidColorBrush Color="LightCoral" Opacity="0.6" />
+            </SplitView.PaneBackground>
+            <SplitView.Background>
+                <LinearGradientBrush StartPoint="0.5,0" EndPoint="0.5,1">
+                    <GradientStop Color="Yellow" Offset="0.0" />
+                    <GradientStop Color="LimeGreen" Offset="1.0" />
+                </LinearGradientBrush>
+            </SplitView.Background>
+            <SplitView.Pane>
+                <StackPanel Margin="0,30,0,0">
+                    <RadioButton Tag="CreateExercise" Click="RadioButtonPaneItem_Click" Width="200" Background="Teal" Margin="-20,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <SymbolIcon Symbol="Add" Foreground="White"/>
+                            <TextBlock Text="CreateExercise" Margin="15,0,0,0" Foreground="White" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Tag="DisplayExerciseList" Click="RadioButtonPaneItem_Click" Width="200" Background="Teal" Margin="-20,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <SymbolIcon Symbol="AllApps" Foreground="White"/>
+                            <TextBlock Text="DisplayExerciseList" Margin="15,0,0,0" Foreground="White" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Tag="CreateWorkout" Click="RadioButtonPaneItem_Click" Width="200" Background="Teal" Margin="-20,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <SymbolIcon Symbol="OpenWith" Foreground="White"/>
+                            <TextBlock Text="CreateWorkout" Margin="15,0,0,0" Foreground="White" />
+                        </StackPanel>
+                    </RadioButton>
+                    <TextBlock Text="" Grid.Row="6" Margin="0,40,0,0"/>
+                    <RadioButton Tag="SaveChanges" Click="RadioButtonPaneSave_Click" Width="200" Background="Green" Margin="-20,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <SymbolIcon Symbol="Save" Foreground="White"/>
+                            <TextBlock Text="SaveChanges" Margin="15,0,0,0" Foreground="White" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Tag="DiscardChanges" Click="RadioButtonPaneDiscard_Click" Width="200" Background="Red" Margin="-20,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <SymbolIcon Symbol="Clear" Foreground="White"/>
+                            <TextBlock Text="DiscardChanges" Margin="15,0,0,0" Foreground="White" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Tag="Settings" Click="RadioButtonPaneItem_Click" Width="200" Background="Gray" Margin="-20,0,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <SymbolIcon Symbol="Setting" Foreground="White"/>
+                            <TextBlock Text="Settings" Margin="15,0,0,0" Foreground="White" />
+                        </StackPanel>
+                    </RadioButton>
+                </StackPanel>
+            </SplitView.Pane>
+            <Frame x:Name="MainFrame" />
+        </SplitView>
+        <Button x:Name="MenuButton" Width="{Binding ElementName=MySplitView, Path=CompactPaneLength}" VerticalAlignment="Top" Click="MenuButton_Click">
+            <StackPanel>
+                <Rectangle Width="15" Height="2" Margin="2" Fill="White" />
+                <Rectangle Width="15" Height="2" Margin="2" Fill="White" />
+                <Rectangle Width="15" Height="2" Margin="2" Fill="White" />
+            </StackPanel>
+        </Button>
+        <Popup x:Name="popupSave" IsOpen="False" Margin="400,300,0,0" IsLightDismissEnabled="True" Width="320" HorizontalAlignment="Left" Height="202">
+            <Popup.ChildTransitions>
+                <TransitionCollection>
+                    <PaneThemeTransition Edge="Left" />
+                </TransitionCollection>
+            </Popup.ChildTransitions>
+            <Grid Width="380" Height="{Binding ElementName=flyoutPane, Path=Height}"  Background="{ThemeResource FlyoutBackgroundThemeBrush}" >
+                <TextBlock Text="Save Dialog Here" Foreground="Green"/>
+            </Grid>
+        </Popup>
+        <Popup x:Name="popupDiscard" IsOpen="False" Margin="400,300,0,0" IsLightDismissEnabled="True" Width="320" HorizontalAlignment="Left" Height="202">
+            <Popup.ChildTransitions>
+                <TransitionCollection>
+                    <PaneThemeTransition Edge="Left" />
+                </TransitionCollection>
+            </Popup.ChildTransitions>
+            <Grid Width="380" Height="{Binding ElementName=flyoutPane, Path=Height}"  Background="{ThemeResource FlyoutBackgroundThemeBrush}" >
+                <TextBlock Text="Discard Dialog Here" Foreground="Red"/>
+            </Grid>
+        </Popup>
+    </Grid>
 </Page>

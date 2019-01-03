@@ -27,34 +27,42 @@ namespace Take1
             this.InitializeComponent();
         }
 
-        private void Button_CreateExercise_Click(object sender, RoutedEventArgs e)
+        private void RadioButtonPaneItem_Click(object sender, RoutedEventArgs e)
         {
-            content.Text = "Obladi";
+            var radioButton = sender as RadioButton;
+
+            if (radioButton != null)
+            {
+                switch (radioButton.Tag.ToString())
+                {
+                    case "CreateExercise":
+                        this.MainFrame.Navigate(typeof(CreateExercisePage));
+                        break;
+                    case "DisplayExerciseList":
+                        this.MainFrame.Navigate(typeof(DisplayExerciseListPage));
+                        break;
+                    case "CreateWorkout":
+                        this.MainFrame.Navigate(typeof(CreateWorkoutPage));
+                        break;
+                    case "Settings":
+                        this.MainFrame.Navigate(typeof(SettingsPage));
+                        break;
+                }
+            }
+        }
+        private void RadioButtonPaneSave_Click(object sender, RoutedEventArgs e)
+        {
+            popupSave.IsOpen = true;
         }
 
-        private void Button_DisplayExerciseList_Click(object sender, RoutedEventArgs e)
+        private void RadioButtonPaneDiscard_Click(object sender, RoutedEventArgs e)
         {
-            content.Text = "Oblada";
+            popupDiscard.IsOpen = true;
         }
 
-        private void Button_CreateWorkout_Click(object sender, RoutedEventArgs e)
+        private void MenuButton_Click(object sender, RoutedEventArgs e)
         {
-            content.Text = "Life Goes On";
-        }
-
-        private void Button_SaveChanges_Click(object sender, RoutedEventArgs e)
-        {
-            content.Text = "Bla Bla Bla";
-        }
-
-        private void Button_DiscardChanges_Click(object sender, RoutedEventArgs e)
-        {
-            content.Text = "Oh How Life Goes";
-        }
-
-        private void Button_Settings_Click(object sender, RoutedEventArgs e)
-        {
-            content.Text = "On Bla.";
+            this.MySplitView.IsPaneOpen = this.MySplitView.IsPaneOpen ? false : true;
         }
     }
 }
