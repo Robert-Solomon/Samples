@@ -29,28 +29,28 @@
 				<TextBlock Text="ACTION" Margin="62,12,0,0" Style="{StaticResource BaseTextBlockStyle}"/>
 				<StackPanel Grid.Row="1" Orientation="Horizontal" Background="#33FFFF00">
 					<SymbolIcon Symbol="Add" Margin="12,0,12,0"/>
-					<Button x:Name="CreateExercise" Content="Create Exercise" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_2"/>
+					<Button x:Name="CreateExercise" Content="Create Exercise" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_CreateExercise_Click"/>
 				</StackPanel>
 				<StackPanel Grid.Row="2" Orientation="Horizontal" Background="#33FFFF00">
 					<SymbolIcon Symbol="AllApps" Margin="12,0,12,0"/>
-					<Button Content="Display Exercise List" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_3"/>
+					<Button x:Name="DisplayExerciseList" Content="Display Exercise List" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_DisplayExerciseList_Click"/>
 				</StackPanel>
 				<StackPanel Grid.Row="3" Orientation="Horizontal" Background="#33FFFF00">
 					<SymbolIcon Symbol="OpenWith" Margin="12,0,12,0"/>
-					<Button Content="Create Workout" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_4"/>
+					<Button x:Name="CreateWorkout" Content="Create Workout" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_CreateWorkout_Click"/>
 				</StackPanel>
 				<TextBlock Text="" Grid.Row="6" Margin="0,40,0,0"/>
 				<StackPanel Grid.Row="7" Orientation="Horizontal" Background="#3300FF00">
 					<SymbolIcon Symbol="Save" Margin="12,0,12,0"/>
-					<Button Content="Save Changes" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_5"/>
+					<Button x:Name="SaveChanges" Content="Save Changes" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_SaveChanges_Click"/>
 				</StackPanel>
 				<StackPanel Grid.Row="8" Orientation="Horizontal" Background="#33FF0000">
 					<SymbolIcon Symbol="Clear" Margin="12,0,12,0"/>
-					<Button Content="Discard Changes" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_6"/>
+					<Button x:Name="DiscardChanges" Content="Discard Changes" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_DiscardChanges_Click"/>
 				</StackPanel>
 				<StackPanel Grid.Row="9" Orientation="Horizontal" Background="#33454545">
 					<SymbolIcon Symbol="Setting" Margin="12,0,12,0"/>
-					<Button Content="Settings" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Click_7"/>
+					<Button x:Name="Settings" Content="Settings" HorizontalAlignment="Left" VerticalAlignment="Top" Click="Button_Settings_Click"/>
 				</StackPanel>
 			</Grid>
 		</SplitView.Pane>

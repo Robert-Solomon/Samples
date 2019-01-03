@@ -27,42 +27,32 @@ namespace Take1
             this.InitializeComponent();
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
-        {
-
-        }
-
-        private void Button_Click_1(object sender, RoutedEventArgs e)
-        {
-
-        }
-
-        private void Button_Click_2(object sender, RoutedEventArgs e)
+        private void Button_CreateExercise_Click(object sender, RoutedEventArgs e)
         {
             content.Text = "Obladi";
         }
 
-        private void Button_Click_3(object sender, RoutedEventArgs e)
+        private void Button_DisplayExerciseList_Click(object sender, RoutedEventArgs e)
         {
             content.Text = "Oblada";
         }
 
-        private void Button_Click_4(object sender, RoutedEventArgs e)
+        private void Button_CreateWorkout_Click(object sender, RoutedEventArgs e)
         {
             content.Text = "Life Goes On";
         }
 
-        private void Button_Click_5(object sender, RoutedEventArgs e)
+        private void Button_SaveChanges_Click(object sender, RoutedEventArgs e)
         {
             content.Text = "Bla Bla Bla";
         }
 
-        private void Button_Click_6(object sender, RoutedEventArgs e)
+        private void Button_DiscardChanges_Click(object sender, RoutedEventArgs e)
         {
             content.Text = "Oh How Life Goes";
         }
 
-        private void Button_Click_7(object sender, RoutedEventArgs e)
+        private void Button_Settings_Click(object sender, RoutedEventArgs e)
         {
             content.Text = "On Bla.";
         }
