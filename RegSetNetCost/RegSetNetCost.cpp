@@ -58,8 +58,8 @@ BOOL SetPrivilege(
 
 BOOL FixCostRegKeys()
 {
-//	LPCWSTR sRegKey = L"MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\DefaultMediaCost";
-	LPCWSTR sRegKey = L"MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\MyTestKey";
+	LPCWSTR sRegKey = L"MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\DefaultMediaCost";
+//	LPCWSTR sRegKey = L"MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\MyTestKey";
 
 	// start by adding required privileges
 	HANDLE procTok = NULL;
@@ -80,7 +80,7 @@ BOOL FixCostRegKeys()
 	BOOL bRet = TRUE;
 
 	PSID pSidOwner = NULL;
-	PSID pSidEveryone = NULL;
+//	PSID pSidEveryone = NULL;
 	SID_IDENTIFIER_AUTHORITY authority;
 	PACL pNewDACL = NULL, pOldDACL = NULL;
 	PSECURITY_DESCRIPTOR pSD = NULL;
@@ -116,37 +116,37 @@ BOOL FixCostRegKeys()
 	// Create Everyone SID, get current DACL, update
 	//
 
-	authority = SECURITY_WORLD_SID_AUTHORITY;
-	if (!AllocateAndInitializeSid(
-		&authority,
-		1, // nSubAuthorityCount
-		SECURITY_WORLD_RID, 0, 0, 0, 0, 0, 0, 0,
-		&pSidOwner))
-	{
-		printf("AllocateAndInitializeSid(Everyone) error: %u\n", GetLastError());
-		bRet = FALSE;
-		goto Cleanup;
-	}
+//	authority = SECURITY_WORLD_SID_AUTHORITY;
+//	if (!AllocateAndInitializeSid(
+//		&authority,
+//		1, // nSubAuthorityCount
+//		SECURITY_WORLD_RID, 0, 0, 0, 0, 0, 0, 0,
+//		&pSidEveryone))
+//	{
+//		printf("AllocateAndInitializeSid(Everyone) error: %u\n", GetLastError());
+//		bRet = FALSE;
+//		goto Cleanup;
+//	}
 
 	// Crate the DACL
-	EXPLICIT_ACCESS ea[2];
+	EXPLICIT_ACCESS ea/*[2]*/;
 	ZeroMemory(&ea, sizeof(ea));
 
-	// Set read access for Everyone.
-	ea[0].grfAccessPermissions = GENERIC_READ;
-	ea[0].grfAccessMode = SET_ACCESS;
-	ea[0].grfInheritance = NO_INHERITANCE;
-	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
-	ea[0].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-	ea[0].Trustee.ptstrName = (LPTSTR)pSidEveryone;
+//	// Set read access for Everyone.
+//	ea[0].grfAccessPermissions = GENERIC_READ;
+//	ea[0].grfAccessMode = SET_ACCESS;
+//	ea[0].grfInheritance = NO_INHERITANCE;
+//	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+//	ea[0].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+//	ea[0].Trustee.ptstrName = (LPTSTR)pSidEveryone;
 
 	// Set full control for Administrators.
-	ea[1].grfAccessPermissions = GENERIC_ALL;
-	ea[1].grfAccessMode = SET_ACCESS;
-	ea[1].grfInheritance = NO_INHERITANCE;
-	ea[1].Trustee.TrusteeForm = TRUSTEE_IS_SID;
-	ea[1].Trustee.TrusteeType = TRUSTEE_IS_GROUP;
-	ea[1].Trustee.ptstrName = (LPTSTR)pSidOwner;
+	ea/*[1]*/.grfAccessPermissions = GENERIC_ALL;
+	ea/*[1]*/.grfAccessMode = SET_ACCESS;
+	ea/*[1]*/.grfInheritance = NO_INHERITANCE;
+	ea/*[1]*/.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea/*[1]*/.Trustee.TrusteeType = TRUSTEE_IS_GROUP;
+	ea/*[1]*/.Trustee.ptstrName = (LPTSTR)pSidOwner;
 
 	//retrieve existing DACL to be modified
 	dwRes = GetNamedSecurityInfo(sRegKey, SE_REGISTRY_KEY, DACL_SECURITY_INFORMATION, NULL, NULL, &pOldDACL, NULL, &pSD);
@@ -157,7 +157,7 @@ BOOL FixCostRegKeys()
 		goto Cleanup;
 	}
 
-	dwRes = SetEntriesInAcl(1, &ea[1], pOldDACL, &pNewDACL);
+	dwRes = SetEntriesInAcl(1 /*2*/, &ea, pOldDACL, &pNewDACL);
 	if (ERROR_SUCCESS != dwRes)
 	{
 		printf("SetEntriesInAcl error: %u\n", dwRes);
@@ -183,8 +183,8 @@ Cleanup:
 	if (pSidOwner != NULL)
 		FreeSid(pSidOwner);
 
-	if (pSidEveryone != NULL)
-		FreeSid(pSidEveryone);
+//	if (pSidEveryone != NULL)
+//		FreeSid(pSidEveryone);
 
 	if (procTok)
 		CloseHandle(procTok);
