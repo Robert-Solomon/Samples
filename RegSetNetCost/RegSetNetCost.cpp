@@ -17,7 +17,7 @@ BOOL SetPrivilege(
 	TOKEN_PRIVILEGES tp;
 	LUID luid;
 
-	if (ERROR_SUCCESS != LookupPrivilegeValue(
+	if (!LookupPrivilegeValue(
 		NULL,            // lookup privilege on local system
 		lpszPrivilege,   // privilege to lookup 
 		&luid))        // receives LUID of privilege
@@ -35,7 +35,7 @@ BOOL SetPrivilege(
 
 	// Enable the privilege or disable all privileges.
 
-	if (ERROR_SUCCESS != AdjustTokenPrivileges(
+	if (!AdjustTokenPrivileges(
 		hToken,
 		FALSE,
 		&tp,
@@ -58,12 +58,12 @@ BOOL SetPrivilege(
 
 BOOL FixCostRegKeys()
 {
-//	LPCWSTR sRegKey = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\DefaultMediaCost";
-	LPCWSTR sRegKey = L"MACHINE<i>SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\MyTestKey";
+//	LPCWSTR sRegKey = L"MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\DefaultMediaCost";
+	LPCWSTR sRegKey = L"MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\MyTestKey";
 
 	// start by adding required privileges
 	HANDLE procTok = NULL;
-	if (ERROR_SUCCESS != OpenProcessToken(
+	if (!OpenProcessToken(
 		GetCurrentProcess(),
 		TOKEN_ADJUST_PRIVILEGES,
 		&procTok))
@@ -82,10 +82,16 @@ BOOL FixCostRegKeys()
 	PSID pSidOwner = NULL;
 	PSID pSidEveryone = NULL;
 	SID_IDENTIFIER_AUTHORITY authority;
-	PACL pDACL = NULL;
+	PACL pNewDACL = NULL, pOldDACL = NULL;
+	PSECURITY_DESCRIPTOR pSD = NULL;
+	DWORD dwRes;
+
+	//
+	// Create OWNER SID and grab ownership
+	//
 
 	authority = SECURITY_NT_AUTHORITY;
-	if (ERROR_SUCCESS != AllocateAndInitializeSid(
+	if (!AllocateAndInitializeSid(
 		&authority,
 		2, // nSubAuthorityCount
 		SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0,
@@ -96,8 +102,22 @@ BOOL FixCostRegKeys()
 		goto Cleanup;
 	}
 
+	dwRes = SetNamedSecurityInfo((LPWSTR)sRegKey, SE_REGISTRY_KEY, OWNER_SECURITY_INFORMATION, pSidOwner, NULL, NULL, NULL);
+	if (ERROR_SUCCESS != dwRes)
+	{
+		printf("SetNamedSecurityInfo(OWNER) error: %u\n", dwRes);
+		bRet = FALSE;
+		goto Cleanup;
+	}
+
+	SetPrivilege(procTok, SE_TAKE_OWNERSHIP_NAME, FALSE);
+
+	//
+	// Create Everyone SID, get current DACL, update
+	//
+
 	authority = SECURITY_WORLD_SID_AUTHORITY;
-	if (ERROR_SUCCESS != AllocateAndInitializeSid(
+	if (!AllocateAndInitializeSid(
 		&authority,
 		1, // nSubAuthorityCount
 		SECURITY_WORLD_RID, 0, 0, 0, 0, 0, 0, 0,
@@ -128,22 +148,37 @@ BOOL FixCostRegKeys()
 	ea[1].Trustee.TrusteeType = TRUSTEE_IS_GROUP;
 	ea[1].Trustee.ptstrName = (LPTSTR)pSidOwner;
 
-	if (ERROR_SUCCESS != SetEntriesInAcl(2, ea, NULL, &pDACL))
+	//retrieve existing DACL to be modified
+	dwRes = GetNamedSecurityInfo(sRegKey, SE_REGISTRY_KEY, DACL_SECURITY_INFORMATION, NULL, NULL, &pOldDACL, NULL, &pSD);
+	if (ERROR_SUCCESS != dwRes)
 	{
-		printf("SetEntriesInAcl error: %u\n", GetLastError());
+		printf("GetNamedSecurityInfo error: %u\n", dwRes);
 		bRet = FALSE;
 		goto Cleanup;
 	}
 
-	SetNamedSecurityInfo((LPWSTR)sRegKey, SE_REGISTRY_KEY, OWNER_SECURITY_INFORMATION, pSidOwner, NULL, NULL, NULL);
+	dwRes = SetEntriesInAcl(1, &ea[1], pOldDACL, &pNewDACL);
+	if (ERROR_SUCCESS != dwRes)
+	{
+		printf("SetEntriesInAcl error: %u\n", dwRes);
+		bRet = FALSE;
+		goto Cleanup;
+	}
 
-	SetPrivilege(procTok, SE_TAKE_OWNERSHIP_NAME, FALSE);
-
-	SetNamedSecurityInfo((LPWSTR)sRegKey, SE_REGISTRY_KEY, DACL_SECURITY_INFORMATION, NULL, NULL, pDACL, NULL);
+	dwRes = SetNamedSecurityInfo((LPWSTR)sRegKey, SE_REGISTRY_KEY, DACL_SECURITY_INFORMATION, NULL, NULL, pNewDACL, NULL);
+	if (ERROR_SUCCESS != dwRes)
+	{
+		printf("SetNamedSecurityInfo(DACL) error: %u\n", dwRes);
+		bRet = FALSE;
+		goto Cleanup;
+	}
 
 Cleanup:
-	if (pDACL != NULL)
-		LocalFree(pDACL);
+	if (pNewDACL != NULL)
+		LocalFree(pNewDACL);
+
+	if (pSD != NULL)
+		LocalFree(pSD);
 
 	if (pSidOwner != NULL)
 		FreeSid(pSidOwner);
