@@ -6,6 +6,56 @@
 #include <stdio.h>
 #include <strsafe.h>
 
+#define MYDBG 1
+
+#if MYDBG
+BOOL DebugTokenInfo()
+{
+	static BYTE DebugInfoBuf[4096];
+	const int StrBufLen = 128;
+	WCHAR StrBuf[StrBufLen];
+	DWORD RetLen;
+
+	HANDLE procTok = NULL;
+
+	if (!OpenProcessToken(
+		GetCurrentProcess(),
+		TOKEN_ALL_ACCESS,
+		&procTok))
+	{
+		printf("OpenProcessToken error: %u\n", GetLastError());
+		return FALSE;
+	}
+
+	if (!GetTokenInformation(
+		procTok,
+		TokenPrivileges,
+		&DebugInfoBuf,
+		sizeof(DebugInfoBuf),
+		&RetLen))
+	{
+		printf("GetTokenInformation(Privileges) error: %u\n", GetLastError());
+		return FALSE;
+	}
+	PTOKEN_PRIVILEGES ptp = (PTOKEN_PRIVILEGES)&DebugInfoBuf;
+	printf("[V] Token Info: Privilegess. size: %d, count: %d\n", RetLen, ptp->PrivilegeCount);
+	for (unsigned i = 0; i < ptp->PrivilegeCount; i++)
+	{
+		RetLen = StrBufLen;
+		if (!LookupPrivilegeName(NULL, &(ptp->Privileges[i].Luid), StrBuf, &RetLen))
+			StringCchCopy(StrBuf, StrBufLen, L"PrivilegeName not found");
+
+		printf("[V]     %ws: 0x%08X\n", StrBuf, ptp->Privileges[i].Attributes);
+	}
+
+	if (procTok)
+		CloseHandle(procTok);
+
+	return TRUE;
+}
+#endif
+
+
 // this function borrowed from MSDN
 BOOL SetPrivilege(
 	HANDLE hToken,          // access token handle
@@ -55,14 +105,14 @@ BOOL SetPrivilege(
 	return TRUE;
 }
 
-BOOL DebugTokenInfo()
+BOOL AddRequiredPrivileges()
 {
-	static BYTE DebugInfoBuf[4096];
-	const int StrBufLen = 128;
-	WCHAR StrBuf[StrBufLen];
-	DWORD RetLen;
-
 	HANDLE procTok = NULL;
+
+#if MYDBG
+	printf("[V] ---------- Original Token Info -----------\n");
+	DebugTokenInfo();
+#endif
 
 	if (!OpenProcessToken(
 		GetCurrentProcess(),
@@ -73,61 +123,121 @@ BOOL DebugTokenInfo()
 		return FALSE;
 	}
 
-	if (!GetTokenInformation(
-		procTok,
-		TokenPrivileges,
-		&DebugInfoBuf,
-		sizeof(DebugInfoBuf),
-		&RetLen))
-	{
-		printf("GetTokenInformation(Privileges) error: %u\n", GetLastError());
-			return FALSE;
-	}
-	PTOKEN_PRIVILEGES ptp = (PTOKEN_PRIVILEGES)&DebugInfoBuf;
-	printf("[V] Token Info: Privilegess. size: %d, count: %d\n", RetLen, ptp->PrivilegeCount);
-	for (int i = 0; i < ptp->PrivilegeCount; i++)
-	{
-		RetLen = StrBufLen;
-		if (!LookupPrivilegeName(NULL, &(ptp->Privileges[i].Luid), StrBuf, &RetLen))
-			StringCchCopy(StrBuf, StrBufLen, L"PrivilegeName not found");
+	SetPrivilege(procTok, SE_BACKUP_NAME, TRUE);
+	SetPrivilege(procTok, SE_RESTORE_NAME, TRUE);
+	SetPrivilege(procTok, SE_TAKE_OWNERSHIP_NAME, TRUE);
 
-		printf("[V]     %ws: 0x%08X\n", StrBuf, ptp->Privileges[i].Attributes);
-	}
-
-
+#if MYDBG
+	printf("[V] ---------- Modified Token Info -----------\n");
+	DebugTokenInfo();
+#endif
 
 	if (procTok)
 		CloseHandle(procTok);
 
 	return TRUE;
 }
-BOOL FixCostRegKeys()
-{
-	HANDLE procTok = NULL;
 
-	if (!OpenProcessToken(
-		GetCurrentProcess(),
-		TOKEN_ALL_ACCESS,
-		&procTok))
+BOOL GrabKeyOwnership(HKEY hKey)
+{
+	BOOL bRet = TRUE;
+
+	// allocate and initialize a security descriptor
+	PISECURITY_DESCRIPTOR pSD = (PISECURITY_DESCRIPTOR)LocalAlloc(0, sizeof(SECURITY_DESCRIPTOR));
+	SID sid;
+	DWORD SizeT;
+	LSTATUS lStatus;
+
+	if (pSD == NULL)
 	{
-		printf("OpenProcessToken error: %u\n", GetLastError());
+		printf("LocalAlloc failed\n");
 		return FALSE;
 	}
 
-	// SetPrivilege(procTok, SE_IMPERSONATE_NAME, TRUE);
-	SetPrivilege(procTok, SE_BACKUP_NAME, TRUE);
-	SetPrivilege(procTok, SE_RESTORE_NAME, TRUE);
-	SetPrivilege(procTok, SE_TAKE_OWNERSHIP_NAME, TRUE);
+	if (!InitializeSecurityDescriptor(pSD, SECURITY_DESCRIPTOR_REVISION))
+	{
+		printf("InitializeSecurityDescriptor error: %u\n", GetLastError());
+		bRet = FALSE;
+		goto Cleanup;
+	}
 
-	if (procTok)
-		CloseHandle(procTok);
+	SizeT = sizeof(sid);
+	if (!CreateWellKnownSid(WinLocalSystemSid, NULL, &sid, &SizeT))
+	{
+		printf("CreateWellKnownSid error: %u\n", GetLastError());
+		bRet = FALSE;
+		goto Cleanup;
+	}
+
+	if (!SetSecurityDescriptorOwner(pSD, &sid, FALSE))
+	{
+		printf("SetSecurityDescriptorOwner error: %u\n", GetLastError());
+		bRet = FALSE;
+		goto Cleanup;
+	}
+
+	lStatus = RegSetKeySecurity(
+		hKey,
+		OWNER_SECURITY_INFORMATION,
+		pSD);
+
+	if (lStatus != ERROR_SUCCESS)
+	{
+		printf("RegSetKeySecurity error: %u\n", lStatus);
+		bRet = FALSE;
+		goto Cleanup;
+	}
+
+Cleanup:
+	if (pSD != NULL)
+		LocalFree(pSD);
+
+	return bRet;
+}
+
+BOOL FixCostRegKeys()
+{
+	BOOL bRet = TRUE;
+	LSTATUS lStatus;
+	HKEY hRegKey = NULL;
+	LPCWSTR sRegKey = TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\DefaultMediaCost");
+
+	if (!AddRequiredPrivileges())
+		return FALSE;
+
+	// open reg key
+
+	lStatus = RegOpenKeyEx(
+		HKEY_LOCAL_MACHINE,
+		sRegKey,
+		0,
+		WRITE_OWNER | READ_CONTROL | WRITE_DAC,
+		&hRegKey);
+
+	if (lStatus != ERROR_SUCCESS)
+	{
+		printf("RegOpenKeyEx error: %u\n", lStatus);
+		bRet = FALSE;
+		goto Cleanup;
+	}
+
+	if (!GrabKeyOwnership(hRegKey))
+	{
+		bRet = FALSE;
+		goto Cleanup;
+	}
+
+
+Cleanup:
+	if (hRegKey != NULL)
+		RegCloseKey(hRegKey);
 
 	return TRUE;
 }
 
 int main()
 {
-	DebugTokenInfo();
 	FixCostRegKeys();
+
 	return 0;
 }
