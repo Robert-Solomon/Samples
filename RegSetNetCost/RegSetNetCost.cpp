@@ -5,56 +5,7 @@
 #include <winnt.h>
 #include <stdio.h>
 #include <strsafe.h>
-
-#define MYDBG 1
-
-#if MYDBG
-BOOL DebugTokenInfo()
-{
-	static BYTE DebugInfoBuf[4096];
-	const int StrBufLen = 128;
-	WCHAR StrBuf[StrBufLen];
-	DWORD RetLen;
-
-	HANDLE procTok = NULL;
-
-	if (!OpenProcessToken(
-		GetCurrentProcess(),
-		TOKEN_ALL_ACCESS,
-		&procTok))
-	{
-		printf("OpenProcessToken error: %u\n", GetLastError());
-		return FALSE;
-	}
-
-	if (!GetTokenInformation(
-		procTok,
-		TokenPrivileges,
-		&DebugInfoBuf,
-		sizeof(DebugInfoBuf),
-		&RetLen))
-	{
-		printf("GetTokenInformation(Privileges) error: %u\n", GetLastError());
-		return FALSE;
-	}
-	PTOKEN_PRIVILEGES ptp = (PTOKEN_PRIVILEGES)&DebugInfoBuf;
-	printf("[V] Token Info: Privilegess. size: %d, count: %d\n", RetLen, ptp->PrivilegeCount);
-	for (unsigned i = 0; i < ptp->PrivilegeCount; i++)
-	{
-		RetLen = StrBufLen;
-		if (!LookupPrivilegeName(NULL, &(ptp->Privileges[i].Luid), StrBuf, &RetLen))
-			StringCchCopy(StrBuf, StrBufLen, L"PrivilegeName not found");
-
-		printf("[V]     %ws: 0x%08X\n", StrBuf, ptp->Privileges[i].Attributes);
-	}
-
-	if (procTok)
-		CloseHandle(procTok);
-
-	return TRUE;
-}
-#endif
-
+#include <AclAPI.h>
 
 // this function borrowed from MSDN
 BOOL SetPrivilege(
@@ -66,7 +17,7 @@ BOOL SetPrivilege(
 	TOKEN_PRIVILEGES tp;
 	LUID luid;
 
-	if (!LookupPrivilegeValue(
+	if (ERROR_SUCCESS != LookupPrivilegeValue(
 		NULL,            // lookup privilege on local system
 		lpszPrivilege,   // privilege to lookup 
 		&luid))        // receives LUID of privilege
@@ -84,7 +35,7 @@ BOOL SetPrivilege(
 
 	// Enable the privilege or disable all privileges.
 
-	if (!AdjustTokenPrivileges(
+	if (ERROR_SUCCESS != AdjustTokenPrivileges(
 		hToken,
 		FALSE,
 		&tp,
@@ -105,18 +56,16 @@ BOOL SetPrivilege(
 	return TRUE;
 }
 
-BOOL AddRequiredPrivileges()
+BOOL FixCostRegKeys()
 {
+//	LPCWSTR sRegKey = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\DefaultMediaCost";
+	LPCWSTR sRegKey = L"MACHINE<i>SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\MyTestKey";
+
+	// start by adding required privileges
 	HANDLE procTok = NULL;
-
-#if MYDBG
-	printf("[V] ---------- Original Token Info -----------\n");
-	DebugTokenInfo();
-#endif
-
-	if (!OpenProcessToken(
+	if (ERROR_SUCCESS != OpenProcessToken(
 		GetCurrentProcess(),
-		TOKEN_ALL_ACCESS,
+		TOKEN_ADJUST_PRIVILEGES,
 		&procTok))
 	{
 		printf("OpenProcessToken error: %u\n", GetLastError());
@@ -126,113 +75,86 @@ BOOL AddRequiredPrivileges()
 	SetPrivilege(procTok, SE_BACKUP_NAME, TRUE);
 	SetPrivilege(procTok, SE_RESTORE_NAME, TRUE);
 	SetPrivilege(procTok, SE_TAKE_OWNERSHIP_NAME, TRUE);
+	SetPrivilege(procTok, SE_SECURITY_NAME, TRUE);
 
-#if MYDBG
-	printf("[V] ---------- Modified Token Info -----------\n");
-	DebugTokenInfo();
-#endif
+	BOOL bRet = TRUE;
+
+	PSID pSidOwner = NULL;
+	PSID pSidEveryone = NULL;
+	SID_IDENTIFIER_AUTHORITY authority;
+	PACL pDACL = NULL;
+
+	authority = SECURITY_NT_AUTHORITY;
+	if (ERROR_SUCCESS != AllocateAndInitializeSid(
+		&authority,
+		2, // nSubAuthorityCount
+		SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0,
+		&pSidOwner))
+	{
+		printf("AllocateAndInitializeSid(Owner) error: %u\n", GetLastError());
+		bRet = FALSE;
+		goto Cleanup;
+	}
+
+	authority = SECURITY_WORLD_SID_AUTHORITY;
+	if (ERROR_SUCCESS != AllocateAndInitializeSid(
+		&authority,
+		1, // nSubAuthorityCount
+		SECURITY_WORLD_RID, 0, 0, 0, 0, 0, 0, 0,
+		&pSidOwner))
+	{
+		printf("AllocateAndInitializeSid(Everyone) error: %u\n", GetLastError());
+		bRet = FALSE;
+		goto Cleanup;
+	}
+
+	// Crate the DACL
+	EXPLICIT_ACCESS ea[2];
+	ZeroMemory(&ea, sizeof(ea));
+
+	// Set read access for Everyone.
+	ea[0].grfAccessPermissions = GENERIC_READ;
+	ea[0].grfAccessMode = SET_ACCESS;
+	ea[0].grfInheritance = NO_INHERITANCE;
+	ea[0].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea[0].Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
+	ea[0].Trustee.ptstrName = (LPTSTR)pSidEveryone;
+
+	// Set full control for Administrators.
+	ea[1].grfAccessPermissions = GENERIC_ALL;
+	ea[1].grfAccessMode = SET_ACCESS;
+	ea[1].grfInheritance = NO_INHERITANCE;
+	ea[1].Trustee.TrusteeForm = TRUSTEE_IS_SID;
+	ea[1].Trustee.TrusteeType = TRUSTEE_IS_GROUP;
+	ea[1].Trustee.ptstrName = (LPTSTR)pSidOwner;
+
+	if (ERROR_SUCCESS != SetEntriesInAcl(2, ea, NULL, &pDACL))
+	{
+		printf("SetEntriesInAcl error: %u\n", GetLastError());
+		bRet = FALSE;
+		goto Cleanup;
+	}
+
+	SetNamedSecurityInfo((LPWSTR)sRegKey, SE_REGISTRY_KEY, OWNER_SECURITY_INFORMATION, pSidOwner, NULL, NULL, NULL);
+
+	SetPrivilege(procTok, SE_TAKE_OWNERSHIP_NAME, FALSE);
+
+	SetNamedSecurityInfo((LPWSTR)sRegKey, SE_REGISTRY_KEY, DACL_SECURITY_INFORMATION, NULL, NULL, pDACL, NULL);
+
+Cleanup:
+	if (pDACL != NULL)
+		LocalFree(pDACL);
+
+	if (pSidOwner != NULL)
+		FreeSid(pSidOwner);
+
+	if (pSidEveryone != NULL)
+		FreeSid(pSidEveryone);
 
 	if (procTok)
 		CloseHandle(procTok);
 
-	return TRUE;
-}
-
-BOOL GrabKeyOwnership(HKEY hKey)
-{
-	BOOL bRet = TRUE;
-
-	// allocate and initialize a security descriptor
-	PISECURITY_DESCRIPTOR pSD = (PISECURITY_DESCRIPTOR)LocalAlloc(0, sizeof(SECURITY_DESCRIPTOR));
-	SID sid;
-	DWORD SizeT;
-	LSTATUS lStatus;
-
-	if (pSD == NULL)
-	{
-		printf("LocalAlloc failed\n");
-		return FALSE;
-	}
-
-	if (!InitializeSecurityDescriptor(pSD, SECURITY_DESCRIPTOR_REVISION))
-	{
-		printf("InitializeSecurityDescriptor error: %u\n", GetLastError());
-		bRet = FALSE;
-		goto Cleanup;
-	}
-
-	SizeT = sizeof(sid);
-	if (!CreateWellKnownSid(WinLocalSystemSid, NULL, &sid, &SizeT))
-	{
-		printf("CreateWellKnownSid error: %u\n", GetLastError());
-		bRet = FALSE;
-		goto Cleanup;
-	}
-
-	if (!SetSecurityDescriptorOwner(pSD, &sid, FALSE))
-	{
-		printf("SetSecurityDescriptorOwner error: %u\n", GetLastError());
-		bRet = FALSE;
-		goto Cleanup;
-	}
-
-	lStatus = RegSetKeySecurity(
-		hKey,
-		OWNER_SECURITY_INFORMATION,
-		pSD);
-
-	if (lStatus != ERROR_SUCCESS)
-	{
-		printf("RegSetKeySecurity error: %u\n", lStatus);
-		bRet = FALSE;
-		goto Cleanup;
-	}
-
-Cleanup:
-	if (pSD != NULL)
-		LocalFree(pSD);
-
 	return bRet;
-}
-
-BOOL FixCostRegKeys()
-{
-	BOOL bRet = TRUE;
-	LSTATUS lStatus;
-	HKEY hRegKey = NULL;
-	LPCWSTR sRegKey = TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\NetworkList\\DefaultMediaCost");
-
-	if (!AddRequiredPrivileges())
-		return FALSE;
-
-	// open reg key
-
-	lStatus = RegOpenKeyEx(
-		HKEY_LOCAL_MACHINE,
-		sRegKey,
-		0,
-		WRITE_OWNER | READ_CONTROL | WRITE_DAC,
-		&hRegKey);
-
-	if (lStatus != ERROR_SUCCESS)
-	{
-		printf("RegOpenKeyEx error: %u\n", lStatus);
-		bRet = FALSE;
-		goto Cleanup;
-	}
-
-	if (!GrabKeyOwnership(hRegKey))
-	{
-		bRet = FALSE;
-		goto Cleanup;
-	}
-
-
-Cleanup:
-	if (hRegKey != NULL)
-		RegCloseKey(hRegKey);
-
-	return TRUE;
 }
 
 int main()
